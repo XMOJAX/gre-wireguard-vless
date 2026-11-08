@@ -1,0 +1,4 @@
+*.log
+tunnel_configs.txt
+*.env
+.DS_Store
