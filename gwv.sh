@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# اتصال مجدد ورودی به ترمینال در صورت پایپ شدن (curl | bash)
+if [ ! -t 0 ] && [ -e /dev/tty ]; then
+    exec < /dev/tty
+fi
+
 # بررسی دسترسی روت
 if [ "$EUID" -ne 0 ]; then
   echo -e "\e[31mPlease run as root (use sudo)\e[0m"
@@ -97,7 +102,16 @@ while true; do
     echo -e "\e[1;36m6) Change MTU of an Existing Tunnel\e[0m"
     echo -e "\e[1;31m0) Exit\e[0m"
     echo -e "\e[36m------------------------------------------------\e[0m"
-    read -p "Select an option (0 to 6): " ROLE
+    
+    if ! read -r -p "Select an option (0 to 6): " ROLE; then
+        echo -e "\n\e[32mExiting...\e[0m"
+        exit 0
+    fi
+    ROLE=$(echo "$ROLE" | tr -d '[:space:]')
+
+    if [ -z "$ROLE" ]; then
+        continue
+    fi
 
     if [ "$ROLE" == "1" ]; then
         echo -e "\n\e[33mScanning system for free ports and IPs...\e[0m"
@@ -117,7 +131,7 @@ while true; do
         
         # گرفتن نام اختصاصی از کاربر
         while true; do
-            read -p "Enter a custom NAME for this tunnel (e.g., germany, game, vip1): " TUNNEL_NAME
+            read -r -p "Enter a custom NAME for this tunnel (e.g., germany, game, vip1): " TUNNEL_NAME
             if [[ ! "$TUNNEL_NAME" =~ ^[a-zA-Z0-9_-]{1,10}$ ]]; then
                 echo -e "\e[31mInvalid name! Use only letters, numbers, hyphens or underscores (max 10 chars).\e[0m"
                 continue
@@ -135,18 +149,18 @@ while true; do
                 echo -e "  \e[33m$((i+1)))\e[0m \e[32m${IP_LIST[$i]}\e[0m"
             done
             echo -e "  \e[33m0)\e[0m \e[32mEnter a custom IP manually\e[0m"
-            read -p "Select IP [1]: " IP_CHOICE
+            read -r -p "Select IP [1]: " IP_CHOICE
             IP_CHOICE=${IP_CHOICE:-1}
             
             if [[ "$IP_CHOICE" == "0" ]]; then
-                read -p "Enter Source Public IP (Iran): " IP_IRAN
+                read -r -p "Enter Source Public IP (Iran): " IP_IRAN
             elif [[ "$IP_CHOICE" =~ ^[0-9]+$ ]] && [ "$IP_CHOICE" -le "${#IP_LIST[@]}" ]; then
                 IP_IRAN="${IP_LIST[$((IP_CHOICE-1))]}"
             else
                 IP_IRAN="${IP_LIST[0]}"
             fi
         else
-            read -p "Enter Source Public IP (Iran): " IP_IRAN
+            read -r -p "Enter Source Public IP (Iran): " IP_IRAN
         fi
 
         RANDOM_WG_BASE=$(( 50000 + RANDOM % 9000 ))
@@ -158,26 +172,26 @@ while true; do
         SUGGESTED_VLESS_PORT=$(get_free_tcp_port $RANDOM_VLESS_BASE)
 
         echo -e "\n\e[36m(Press ENTER to use defaults in brackets)\e[0m"
-        read -p "Enter Destination Public IP (Kharej): " IP_KHAREJ
+        read -r -p "Enter Destination Public IP (Kharej): " IP_KHAREJ
         while [[ -z "$IP_KHAREJ" ]]; do
-            read -p "Destination IP cannot be empty! Enter Destination Public IP: " IP_KHAREJ
+            read -r -p "Destination IP cannot be empty! Enter Destination Public IP: " IP_KHAREJ
         done
 
-        read -p "Enter GRE IP for Iran [${SUGGESTED_GRE_PREFIX}.1]: " GRE_IRAN
+        read -r -p "Enter GRE IP for Iran [${SUGGESTED_GRE_PREFIX}.1]: " GRE_IRAN
         GRE_IRAN=${GRE_IRAN:-${SUGGESTED_GRE_PREFIX}.1}
-        read -p "Enter GRE IP for Kharej [${SUGGESTED_GRE_PREFIX}.2]: " GRE_KHAREJ
+        read -r -p "Enter GRE IP for Kharej [${SUGGESTED_GRE_PREFIX}.2]: " GRE_KHAREJ
         GRE_KHAREJ=${GRE_KHAREJ:-${SUGGESTED_GRE_PREFIX}.2}
         
-        read -p "Enter WireGuard IP for Iran [${SUGGESTED_WG_PREFIX}.1]: " WG_IRAN
+        read -r -p "Enter WireGuard IP for Iran [${SUGGESTED_WG_PREFIX}.1]: " WG_IRAN
         WG_IRAN=${WG_IRAN:-${SUGGESTED_WG_PREFIX}.1}
-        read -p "Enter WireGuard IP for Kharej [${SUGGESTED_WG_PREFIX}.2]: " WG_KHAREJ
+        read -r -p "Enter WireGuard IP for Kharej [${SUGGESTED_WG_PREFIX}.2]: " WG_KHAREJ
         WG_KHAREJ=${WG_KHAREJ:-${SUGGESTED_WG_PREFIX}.2}
 
-        read -p "Enter WireGuard Port [$SUGGESTED_WG_PORT]: " WG_PORT
+        read -r -p "Enter WireGuard Port [$SUGGESTED_WG_PORT]: " WG_PORT
         WG_PORT=${WG_PORT:-$SUGGESTED_WG_PORT}
-        read -p "Enter VLESS Connection Port [$SUGGESTED_VLESS_PORT]: " VLESS_PORT
+        read -r -p "Enter VLESS Connection Port [$SUGGESTED_VLESS_PORT]: " VLESS_PORT
         VLESS_PORT=${VLESS_PORT:-$SUGGESTED_VLESS_PORT}
-        read -p "Enter WireGuard MTU [1360]: " WG_MTU
+        read -r -p "Enter WireGuard MTU [1360]: " WG_MTU
         WG_MTU=${WG_MTU:-1360}
 
         PRIV_IRAN=$(wg genkey)
@@ -239,11 +253,11 @@ EOF
         echo -e "  * Port:       \e[32m${VLESS_PORT}\e[0m"
         echo -e "  * ID (UUID):  \e[32m${UUID}\e[0m"
         
-        read -p $'\n\e[1;32m[!] Press ENTER to return to the main menu...\e[0m'
+        read -r -p $'\n\e[1;32m[!] Press ENTER to return to the main menu...\e[0m'
 
     elif [ "$ROLE" == "2" ]; then
         echo -e "\n\e[33m--- Awaiting Configuration Token ---\e[0m"
-        read -p "Enter Token from Source Server: " TOKEN
+        read -r -p "Enter Token from Source Server: " TOKEN
         RAW_TOKEN=$(echo -n "$TOKEN" | base64 -d)
 
         IP_IRAN=$(echo "$RAW_TOKEN" | cut -d'|' -f1)
@@ -265,7 +279,7 @@ EOF
         
         echo -e "\n\e[36m--- Local Interface Configuration ---\e[0m"
         while true; do
-            read -p "Enter a custom NAME for THIS server (Kharej) [$SUGGESTED_NAME]: " TUNNEL_NAME
+            read -r -p "Enter a custom NAME for THIS server (Kharej) [$SUGGESTED_NAME]: " TUNNEL_NAME
             TUNNEL_NAME=${TUNNEL_NAME:-$SUGGESTED_NAME}
             
             if [[ ! "$TUNNEL_NAME" =~ ^[a-zA-Z0-9_-]{1,10}$ ]]; then
@@ -328,7 +342,7 @@ EOF
             echo -e "\e[1;31m[ERROR] Connection Test FAILED!\e[0m"
         fi
         
-        read -p $'\n\e[1;32m[!] Press ENTER to return to the main menu...\e[0m'
+        read -r -p $'\n\e[1;32m[!] Press ENTER to return to the main menu...\e[0m'
 
     elif [ "$ROLE" == "3" ]; then
         echo -e "\n\e[1;33m--- Manage & Delete Existing Tunnels ---\e[0m"
@@ -342,7 +356,7 @@ EOF
             for i in "${!WG_ARRAY[@]}"; do
                 echo -e "  \e[33m$((i+1)))\e[0m \e[32m${WG_ARRAY[$i]}\e[0m (Will also cleanly delete associated GRE Service)"
             done
-            read -p "Enter tunnel number to delete (or press Enter to skip): " DEL_NUM
+            read -r -p "Enter tunnel number to delete (or press Enter to skip): " DEL_NUM
             
             if [[ "$DEL_NUM" =~ ^[0-9]+$ ]] && [ "$DEL_NUM" -ge 1 ] && [ "$DEL_NUM" -le "${#WG_ARRAY[@]}" ]; then
                 DEL_WG="${WG_ARRAY[$((DEL_NUM-1))]}"
@@ -364,13 +378,13 @@ EOF
             fi
         fi
         
-        read -p $'\n\e[1;32m[!] Press ENTER to return to the main menu...\e[0m'
+        read -r -p $'\n\e[1;32m[!] Press ENTER to return to the main menu...\e[0m'
 
     elif [ "$ROLE" == "4" ]; then
         echo -e "\n\e[1;33m--- Setup History & Saved Tokens ---\e[0m"
         if [ -f "tunnel_configs.txt" ]; then
             cat tunnel_configs.txt
-            read -p $'\n\e[1;32m[!] Press ENTER to return, or type "C" to clear history: \e[0m' CLEAR_OPT
+            read -r -p $'\n\e[1;32m[!] Press ENTER to return, or type "C" to clear history: \e[0m' CLEAR_OPT
             if [[ "${CLEAR_OPT^^}" == "C" ]]; then
                 rm -f tunnel_configs.txt
                 echo -e "\e[32mHistory cleared successfully.\e[0m"
@@ -378,7 +392,7 @@ EOF
             fi
         else
             echo -e "\n\e[31mNo previous configuration history found.\e[0m"
-            read -p $'\n\e[1;32m[!] Press ENTER to return to the main menu...\e[0m'
+            read -r -p $'\n\e[1;32m[!] Press ENTER to return to the main menu...\e[0m'
         fi
 
     elif [ "$ROLE" == "5" ]; then
@@ -392,7 +406,7 @@ EOF
             for i in "${!WG_ARRAY[@]}"; do
                 echo -e "  \e[33m$((i+1)))\e[0m \e[32m${WG_ARRAY[$i]}\e[0m"
             done
-            read -p "Select a tunnel to test [0]: " TEST_OPT
+            read -r -p "Select a tunnel to test [0]: " TEST_OPT
             TEST_OPT=${TEST_OPT:-0}
 
             test_single_tunnel() {
@@ -416,7 +430,7 @@ EOF
                 test_single_tunnel "${WG_ARRAY[$((TEST_OPT-1))]}"
             fi
         fi
-        read -p $'\n\e[1;32m[!] Press ENTER to return to the main menu...\e[0m'
+        read -r -p $'\n\e[1;32m[!] Press ENTER to return to the main menu...\e[0m'
 
     elif [ "$ROLE" == "6" ]; then
         echo -e "\n\e[1;36m--- Change MTU of an Existing Tunnel ---\e[0m"
@@ -429,7 +443,7 @@ EOF
                 CURRENT_MTU=$(grep "MTU" "/etc/wireguard/${WG_ARRAY[$i]}.conf" | awk -F'=' '{print $2}' | tr -d ' ')
                 echo -e "  \e[33m$((i+1)))\e[0m \e[32m${WG_ARRAY[$i]}\e[0m (Current MTU: ${CURRENT_MTU:-Default})"
             done
-            read -p "Select the tunnel to modify (or press Enter to cancel): " MTU_OPT
+            read -r -p "Select the tunnel to modify (or press Enter to cancel): " MTU_OPT
             
             if [[ "$MTU_OPT" =~ ^[0-9]+$ ]] && [ "$MTU_OPT" -ge 1 ] && [ "$MTU_OPT" -le "${#WG_ARRAY[@]}" ]; then
                 SELECTED_WG="${WG_ARRAY[$((MTU_OPT-1))]}"
@@ -444,7 +458,7 @@ EOF
                     SRV_NAME="gre${TUNNEL_NAME}-tunnel.service"
                 fi
                 
-                read -p "Enter NEW MTU for $SELECTED_WG [e.g., 1280 or 1360]: " NEW_MTU
+                read -r -p "Enter NEW MTU for $SELECTED_WG [e.g., 1280 or 1360]: " NEW_MTU
                 if [[ "$NEW_MTU" =~ ^[0-9]+$ ]]; then
                     if grep -q "^MTU" "/etc/wireguard/${SELECTED_WG}.conf"; then
                         sed -i "s/^MTU.*/MTU = $NEW_MTU/" "/etc/wireguard/${SELECTED_WG}.conf"
@@ -466,7 +480,7 @@ EOF
                 fi
             fi
         fi
-        read -p $'\n\e[1;32m[!] Press ENTER to return to the main menu...\e[0m'
+        read -r -p $'\n\e[1;32m[!] Press ENTER to return to the main menu...\e[0m'
 
     elif [ "$ROLE" == "0" ]; then
         echo -e "\n\e[32mExited gracefully. Have a great day!\e[0m\n"

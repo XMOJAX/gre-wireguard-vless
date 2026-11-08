@@ -7,6 +7,11 @@
 
 set -e
 
+# اتصال مجدد ورودی به ترمینال در صورت پایپ شدن (curl | bash)
+if [ ! -t 0 ] && [ -e /dev/tty ]; then
+    exec < /dev/tty
+fi
+
 # بررسی دسترسی روت / Check Root
 if [ "$EUID" -ne 0 ]; then
   echo -e "\e[31m[ERROR] Please run this installer as root (use sudo)!\e[0m"
@@ -49,7 +54,7 @@ echo ""
 echo -e "      \e[1;36msudo gwv\e[0m   or   \e[1;36msudo gwv-tunnel\e[0m"
 echo ""
 
-read -p "Would you like to run gwv right now? [y/N]: " RUN_NOW
+read -r -p "Would you like to run gwv right now? [y/N]: " RUN_NOW
 if [[ "$RUN_NOW" =~ ^[yY]$ ]]; then
     exec "${INSTALL_DIR}/${BIN_NAME}"
 fi
